@@ -6,8 +6,9 @@ import {
   obtenerContexto,
   lineaTiempo,
   listarSintomas,
+  obtenerRuta,
 } from "@/lib/api";
-import { Contexto, Evento, PacienteDetalle, Rol, Sintoma } from "@/lib/tipos";
+import { Contexto, Evento, PacienteDetalle, Rol, Ruta, Sintoma } from "@/lib/tipos";
 
 // Historia clínica: visible para todos los roles (solo lectura).
 export default function Historia({
@@ -21,6 +22,7 @@ export default function Historia({
   const [contexto, setContexto] = useState<Contexto | null>(null);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [sintomas, setSintomas] = useState<Sintoma[]>([]);
+  const [ruta, setRuta] = useState<Ruta | null>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -29,12 +31,14 @@ export default function Historia({
       obtenerContexto(pacienteId, rol),
       lineaTiempo(pacienteId, rol),
       listarSintomas(pacienteId, rol),
-    ]).then(([d, c, e, s]) => {
+      obtenerRuta(pacienteId, rol),
+    ]).then(([d, c, e, s, r]) => {
       if (!vivo) return;
       setDetalle(d);
       setContexto(c);
       setEventos(e);
       setSintomas(s);
+      setRuta(r);
     });
     return () => {
       vivo = false;
@@ -53,6 +57,27 @@ export default function Historia({
   return (
     <div>
       <h1>Historia clínica · {detalle.paciente_id}</h1>
+
+      {ruta && ruta.etapa && (
+        <div className="ruta-atencion">
+          <h3 style={{ marginTop: 0 }}>Ruta de atención</h3>
+          <div className="ruta-pasos">
+            {ruta.etapas.map((e, i) => (
+              <span
+                key={e}
+                className={`ruta-paso ${i === ruta.indice ? "activo" : ""} ${
+                  i < ruta.indice ? "hecho" : ""
+                }`}
+              >
+                {e}
+              </span>
+            ))}
+          </div>
+          <p className="fecha" style={{ marginTop: "0.4rem" }}>
+            <strong>{ruta.fase}</strong> · {ruta.resumen} Sigue: {ruta.siguiente}
+          </p>
+        </div>
+      )}
 
       <h3>Datos del paciente</h3>
       <div className="datos">

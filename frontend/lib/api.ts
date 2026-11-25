@@ -12,6 +12,7 @@ import {
   ReporteSintoma,
   Resultado,
   Rol,
+  Ruta,
   Sintoma,
 } from "./tipos";
 
@@ -82,6 +83,9 @@ export const listarCitas = (id: string, rol: Rol | null) =>
 
 export const listarMediciones = (id: string, rol: Rol | null) =>
   pedir<Medicion[]>(`/pacientes/${id}/mediciones`, rol);
+
+export const obtenerRuta = (id: string, rol: Rol | null) =>
+  pedir<Ruta>(`/pacientes/${id}/ruta`, rol);
 
 export const listarReportesMedicos = (id: string, rol: Rol | null) =>
   pedir<Reporte[]>(`/pacientes/${id}/reportes-medicos`, rol);

@@ -38,9 +38,10 @@ export default function Triaje({ rol }: { rol: Rol }) {
     <div>
       <h1>Reportes de pacientes</h1>
       <p className="fecha">
-        Síntomas autorreportados por todos los pacientes, ordenados por
-        prioridad de gestión (no es una valoración médica). {filas.length}{" "}
-        registros.
+        Síntomas autorreportados por todos los pacientes, clasificados con un
+        semáforo de gestión (verde: autocuidado · ámbar: reevaluar en 24 h ·
+        rojo: valoración presencial). Es un orden de gestión, no una valoración
+        médica. {filas.length} registros.
       </p>
       {error && <p className="error">{error}</p>}
 
@@ -50,22 +51,21 @@ export default function Triaje({ rol }: { rol: Rol }) {
         <table className="tabla">
           <thead>
             <tr>
-              <th>Prioridad</th>
+              <th>Semáforo</th>
               <th>Nombre</th>
               <th>Edad</th>
               <th>Código</th>
               <th>Síntoma</th>
               <th>Gravedad</th>
+              <th>Acción recomendada</th>
             </tr>
           </thead>
           <tbody>
             {filas.map((f, i) => (
               <tr key={`${f.paciente_id}-${i}`}>
                 <td>
-                  <span
-                    className={`estado-badge prioridad-${f.prioridad.toLowerCase()}`}
-                  >
-                    {f.prioridad}
+                  <span className={`estado-badge semaforo-${f.nivel}`}>
+                    ● {f.semaforo}
                   </span>
                 </td>
                 <td>{f.nombre}</td>
@@ -73,11 +73,15 @@ export default function Triaje({ rol }: { rol: Rol }) {
                 <td>{f.paciente_id}</td>
                 <td>
                   {f.sintoma}
-                  {f.modulo && (
-                    <div className="fecha">{f.modulo}</div>
+                  {f.modulo && <div className="fecha">{f.modulo}</div>}
+                </td>
+                <td>
+                  {f.intensidad || "—"}
+                  {f.interferencia && (
+                    <div className="fecha">Interferencia: {f.interferencia}</div>
                   )}
                 </td>
-                <td>{f.intensidad || "—"}</td>
+                <td className="fecha">{f.accion}</td>
               </tr>
             ))}
           </tbody>

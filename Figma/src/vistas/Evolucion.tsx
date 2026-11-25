@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listarMediciones, ApiError } from '../lib/api'
-import type { Medicion } from '../lib/types'
+import { listarMediciones, obtenerRuta, ApiError } from '../lib/api'
+import type { Medicion, Ruta } from '../lib/types'
 
 // Series de evolución y sus colores (mockups 19-24).
 const SERIES = [
@@ -19,6 +19,7 @@ type Vista = 'mensual' | 'semestral'
 // muestra su valor. Datos sintéticos desde el backend. Krebs no interpreta.
 export default function Evolucion({ pacienteId }: { pacienteId: string }) {
   const [datos, setDatos] = useState<Medicion[]>([])
+  const [ruta, setRuta] = useState<Ruta | null>(null)
   const [error, setError] = useState('')
   const [vista, setVista] = useState<Vista>('mensual')
   const [mesIdx, setMesIdx] = useState(0) // 0 = primer mes disponible
@@ -28,6 +29,7 @@ export default function Evolucion({ pacienteId }: { pacienteId: string }) {
     listarMediciones(pacienteId)
       .then(setDatos)
       .catch((e) => setError(e instanceof ApiError ? e.detalle : 'No se pudo cargar.'))
+    obtenerRuta(pacienteId).then(setRuta).catch(() => {})
   }, [pacienteId])
 
   // Meses disponibles (claves "AAAA-MM") ordenados.
@@ -46,6 +48,32 @@ export default function Evolucion({ pacienteId }: { pacienteId: string }) {
 
   return (
     <div className="h-full overflow-y-auto px-4 pb-4 pt-4">
+      {/* Ruta de atención (vía clínica Colombia) */}
+      {ruta && ruta.etapa && (
+        <div className="card-krebs mb-3 p-3">
+          <p className="mb-2 text-[13px] font-bold text-krebs-ink">Tu ruta de atención</p>
+          <div className="flex flex-wrap gap-1.5">
+            {ruta.etapas.map((e, i) => (
+              <span
+                key={e}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  i === ruta.indice
+                    ? 'bg-krebs-nav text-white'
+                    : i < ruta.indice
+                      ? 'bg-[#cdeccd] text-[#107569]'
+                      : 'bg-white/70 text-krebs-ink/60'
+                }`}
+              >
+                {e}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 text-[12.5px] text-krebs-ink/80">
+            Estás en <b>{ruta.fase}</b>. {ruta.resumen}
+          </p>
+        </div>
+      )}
+
       {/* Toggle Mensual / Semestral */}
       <div className="card-krebs mb-3 flex items-center justify-center gap-6 p-3">
         <Toggle activo={vista === 'mensual'} color="#8fd14f" onClick={() => { setVista('mensual'); setSel(null) }}>

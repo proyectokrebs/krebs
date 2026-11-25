@@ -98,3 +98,13 @@ export interface Medicion {
   valor: number
   unidad: string
 }
+
+export interface Ruta {
+  fase: string
+  etapa: string
+  indice: number
+  total: number
+  resumen: string
+  siguiente: string
+  etapas: string[]
+}

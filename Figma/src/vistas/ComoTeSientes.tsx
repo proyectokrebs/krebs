@@ -12,13 +12,46 @@ import type { CatalogoSintomas, Sintoma } from '../lib/types'
 const INTENSIDADES = ['Leve', 'Moderada', 'Intensa', 'Muy intensa']
 const FRECUENCIAS = ['Ocasional', 'A veces', 'Frecuente', 'Constante']
 
+// Semáforo de gestión que refleja backend/app/triaje.py (verde/ámbar/rojo).
+// Es un orden de gestión y un mensaje de autocuidado, NO una valoración médica.
+const INTENSIDAD_PUNTAJE: Record<string, number> = {
+  leve: 1, moderada: 2, intensa: 3, 'muy intensa': 4,
+}
+const SINTOMA_SENSIBLE: { clave: string; peso: number }[] = [
+  { clave: 'vómito con sangre', peso: 4 },
+  { clave: 'melena', peso: 4 },
+  { clave: 'desmayo', peso: 3 },
+  { clave: 'falta de aire', peso: 3 },
+  { clave: 'dolor torácico', peso: 3 },
+  { clave: 'confusión', peso: 3 },
+  { clave: 'deshidratación', peso: 2 },
+  { clave: 'vómitos', peso: 1 },
+  { clave: 'diarrea', peso: 1 },
+  { clave: 'pérdida involuntaria de peso', peso: 1 },
+]
+
+function evaluarSemaforo(sintoma: string, intensidad: string) {
+  const base = INTENSIDAD_PUNTAJE[intensidad.trim().toLowerCase()] ?? 0
+  const s = sintoma.trim().toLowerCase()
+  let extra = 0
+  for (const { clave, peso } of SINTOMA_SENSIBLE) {
+    if (s.includes(clave)) extra = Math.max(extra, peso)
+  }
+  const puntaje = base + extra
+  if (puntaje >= 6)
+    return { nivel: 'rojo', etiqueta: 'Rojo', clase: 'bg-[#fde8e8] text-[#b42318]', accion: 'Conviene una valoración presencial. Tu equipo podría contactarte; si te sientes mal ahora, comunícate con tu equipo o una línea de emergencia.' }
+  if (puntaje >= 3)
+    return { nivel: 'ambar', etiqueta: 'Ámbar', clase: 'bg-[#fff4e5] text-[#b26a00]', accion: 'Conviene revisar cómo evoluciona en las próximas 24 horas. Si empeora, repórtalo de nuevo.' }
+  return { nivel: 'verde', etiqueta: 'Verde', clase: 'bg-[#e6f4ea] text-[#107569]', accion: 'Síntoma leve y estable. Continúa con tus cuidados habituales y registra si cambia.' }
+}
+
 // "¿Cómo te sientes?": autorreporte de síntomas del paciente con lista cerrada.
 // Usa POST /sintomas (rol paciente); el backend lo guarda como autorreporte.
 export default function ComoTeSientes({ pacienteId }: { pacienteId: string }) {
   const [catalogo, setCatalogo] = useState<CatalogoSintomas>({})
   const [sintomas, setSintomas] = useState<Sintoma[]>([])
   const [error, setError] = useState('')
-  const [ok, setOk] = useState(false)
+  const [feedback, setFeedback] = useState<ReturnType<typeof evaluarSemaforo> | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [form, setForm] = useState({
     modulo: '',
@@ -53,11 +86,11 @@ export default function ComoTeSientes({ pacienteId }: { pacienteId: string }) {
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setOk(false)
+    setFeedback(null)
     setEnviando(true)
     try {
       await crearSintoma(pacienteId, form)
-      setOk(true)
+      setFeedback(evaluarSemaforo(form.sintoma, form.intensidad))
       await recargar()
     } catch (err) {
       setError(err instanceof ApiError ? err.detalle : 'No se pudo registrar.')
@@ -132,7 +165,15 @@ export default function ComoTeSientes({ pacienteId }: { pacienteId: string }) {
         </div>
 
         {error && <p className="text-[13px] font-semibold text-red-600">{error}</p>}
-        {ok && <p className="text-[13px] font-semibold text-emerald-700">Registrado. Gracias por contarnos.</p>}
+        {feedback && (
+          <div className={`rounded-xl px-3 py-2.5 text-[13px] ${feedback.clase}`}>
+            <p className="font-bold">Registrado. Gracias por contarnos.</p>
+            <p className="mt-1 flex items-center gap-1.5 font-semibold">
+              <span>● Nivel {feedback.etiqueta}</span>
+            </p>
+            <p className="mt-0.5">{feedback.accion}</p>
+          </div>
+        )}
 
         <button
           type="submit"

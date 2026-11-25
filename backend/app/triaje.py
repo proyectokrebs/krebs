@@ -55,3 +55,39 @@ def etiqueta(valor: int) -> str:
     if valor >= 3:
         return "Media"
     return "Baja"
+
+
+# Semáforo de 3 niveles inspirado en el modelo ePRO con triaje de enfermería
+# (eHealth Enhanced Chronic Care Model) y en el ensayo PRO-TECT: verde
+# (autocuidado), ámbar (reevaluar en 24 h) y rojo (valoración presencial).
+# Es un ORDEN DE GESTIÓN, no una valoración médica: Krebs no diagnostica.
+_SEMAFORO = {
+    "rojo": {
+        "nivel": "rojo",
+        "etiqueta": "Rojo",
+        "accion": "Valoración presencial recomendada. Contactar al paciente.",
+    },
+    "ambar": {
+        "nivel": "ambar",
+        "etiqueta": "Ámbar",
+        "accion": "Reevaluar en 24 horas; puede cambiar de severidad.",
+    },
+    "verde": {
+        "nivel": "verde",
+        "etiqueta": "Verde",
+        "accion": "Síntoma leve y estable; apoyo de autocuidado.",
+    },
+}
+
+
+def semaforo(valor: int) -> dict:
+    """Nivel de semáforo (verde/ámbar/rojo) con su acción recomendada.
+
+    Los cortes siguen el mismo puntaje que ``etiqueta``: alto -> rojo,
+    medio -> ámbar, bajo -> verde.
+    """
+    if valor >= 6:
+        return _SEMAFORO["rojo"]
+    if valor >= 3:
+        return _SEMAFORO["ambar"]
+    return _SEMAFORO["verde"]

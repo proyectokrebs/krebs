@@ -102,8 +102,22 @@ export interface ReporteSintoma {
   modulo: string;
   intensidad: string;
   frecuencia: string;
+  interferencia: string;
   prioridad: string;
   puntaje: number;
+  nivel: string; // verde | ambar | rojo
+  semaforo: string; // etiqueta del semáforo
+  accion: string; // acción de gestión recomendada
+}
+
+export interface Ruta {
+  fase: string;
+  etapa: string;
+  indice: number;
+  total: number;
+  resumen: string;
+  siguiente: string;
+  etapas: string[];
 }
 
 // Catálogo de síntomas: módulo -> lista de síntomas.

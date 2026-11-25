@@ -75,6 +75,18 @@ class ReporteDetalleOut(BaseModel):
     sintomas: list[SintomaOut]
 
 
+class RutaOut(BaseModel):
+    """Ubicación del paciente en la ruta de atención (vía clínica Colombia)."""
+
+    fase: str
+    etapa: str
+    indice: int
+    total: int
+    resumen: str
+    siguiente: str
+    etapas: list[str]
+
+
 class PendienteOut(BaseModel):
     tipo: str              # "Hito" o "Alerta"
     titulo: str
@@ -197,8 +209,12 @@ class ReporteSintomaOut(BaseModel):
     modulo: str
     intensidad: str
     frecuencia: str
+    interferencia: str
     prioridad: str        # Alta / Media / Baja (prioridad de gestión)
     puntaje: int
+    nivel: str            # verde / ambar / rojo (semáforo)
+    semaforo: str         # etiqueta legible del semáforo
+    accion: str           # acción de gestión recomendada
 
 
 class NuevoReporteMedicoIn(BaseModel):

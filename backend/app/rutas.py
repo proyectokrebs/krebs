@@ -37,10 +37,12 @@ from app.esquemas import (
     ReporteSintomaOut,
     ReprogramarCitaIn,
     ResultadoOut,
+    RutaOut,
     SintomaOut,
 )
 from app.fechas import dias_hasta, es_proximo
 from app.roles import exigir_rol
+from app import ruta as ruta_atencion
 
 router = APIRouter()
 
@@ -173,6 +175,15 @@ def listar_citas(paciente_id: str, fuente: FuenteDatos = Depends(obtener_fuente)
     return [CitaOut(**c.__dict__) for c in fuente.listar_citas(paciente_id)]
 
 
+@router.get("/pacientes/{paciente_id}/ruta", response_model=RutaOut)
+def obtener_ruta(paciente_id: str, fuente: FuenteDatos = Depends(obtener_fuente)):
+    """Ubica al paciente en la ruta de atención del cáncer gástrico (Colombia)."""
+    paciente = fuente.obtener_paciente(paciente_id)
+    if paciente is None:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado.")
+    return RutaOut(**ruta_atencion.ubicar(paciente.fase_actual))
+
+
 @router.get("/pacientes/{paciente_id}/mediciones", response_model=list[MedicionOut])
 def listar_mediciones(paciente_id: str, fuente: FuenteDatos = Depends(obtener_fuente)):
     """Serie de evolución (tumoral, CEA, nutricional, hemoglobina) para las
@@ -231,11 +242,14 @@ def tablero_reportes_sintomas(fuente: FuenteDatos = Depends(obtener_fuente)):
     filas: list[ReporteSintomaOut] = []
     for paciente, s in fuente.sintomas_de_todos():
         puntaje = triaje.puntaje(s.sintoma, s.intensidad)
+        sem = triaje.semaforo(puntaje)
         filas.append(ReporteSintomaOut(
             paciente_id=paciente.paciente_id, nombre=paciente.paciente_id,
             edad=paciente.edad, sintoma=s.sintoma, modulo=s.modulo,
             intensidad=s.intensidad, frecuencia=s.frecuencia,
+            interferencia=s.interferencia,
             prioridad=triaje.etiqueta(puntaje), puntaje=puntaje,
+            nivel=sem["nivel"], semaforo=sem["etiqueta"], accion=sem["accion"],
         ))
     filas.sort(key=lambda r: r.puntaje, reverse=True)
     return filas

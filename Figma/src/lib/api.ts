@@ -19,6 +19,7 @@ import type {
   PacienteResumen,
   ReporteDetalle,
   Resultado,
+  Ruta,
   Sintoma,
 } from './types'
 
@@ -82,6 +83,8 @@ export const obtenerReporte = (reporteId: string) =>
   pedir<ReporteDetalle>(`/reportes/${reporteId}`)
 export const listarMediciones = (id: string) =>
   pedir<Medicion[]>(`/pacientes/${id}/mediciones`)
+export const obtenerRuta = (id: string) =>
+  pedir<Ruta>(`/pacientes/${id}/ruta`)
 export const obtenerCatalogoSintomas = () =>
   pedir<CatalogoSintomas>('/catalogo-sintomas')
 
