@@ -1,0 +1,17 @@
+# Datos (nunca versionar datos de pacientes, aunque sean sintéticos).
+# Solo la carpeta de datos de la raíz; no la capa de código backend/app/datos/.
+/datos/
+*.xlsx
+*.xls
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.streamlit/secrets.toml
+
+# Sistema
+.DS_Store
+Thumbs.db

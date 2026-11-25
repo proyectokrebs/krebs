@@ -1,0 +1,10 @@
+{
+  "description": "Prototipo de interfaz con botones funcionales y autorizaciones que habilitan el avance solo después de seleccionar la casilla requerida.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
