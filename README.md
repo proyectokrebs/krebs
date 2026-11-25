@@ -1,7 +1,7 @@
 # Krebs
 
-Prototipo de aplicación web para el **seguimiento y acompañamiento de pacientes con
-cáncer gástrico**. Pensado para integrarse más adelante con los sistemas de Keralty.
+Prototipo para el **seguimiento y acompañamiento de pacientes con cáncer gástrico**.
+Pensado para integrarse más adelante con los sistemas de la EPS.
 
 > **Krebs es una herramienta de apoyo. No diagnostica, no interpreta resultados ni
 > reemplaza la consulta con su médico.** Usa únicamente datos sintéticos o
@@ -9,117 +9,189 @@ cáncer gástrico**. Pensado para integrarse más adelante con los sistemas de K
 
 ## Arquitectura
 
-- **Backend:** API REST en FastAPI sobre SQLite (`backend/`).
-- **Frontend:** aplicación Next.js (App Router, TypeScript) en `frontend/`.
-- La capa de datos depende solo de la interfaz `FuenteDatos`, de modo que SQLite se
-  puede reemplazar por los sistemas de Keralty sin tocar los endpoints ni el
-  frontend (ver `backend/app/datos/fuente_keralty.py`).
+Tres piezas sobre un mismo backend:
 
-## Qué ofrece
+- **Backend** — API REST en FastAPI sobre SQLite (`backend/`).
+- **App móvil del paciente** — React + Vite + Tailwind (`Figma/`). Onboarding,
+  hub de herramientas y las funciones del paciente. Pensada para teléfono.
+- **Panel de escritorio** — Next.js (App Router, TypeScript) en `frontend/`. Vista
+  operativa para **médico** y **call center**. Pensado para PC.
 
-1. **Historia clínica** (todos los roles) — datos del paciente, contexto clínico,
-   síntomas tal como los reportó el paciente y línea de tiempo con hitos, reportes,
-   resultados y citas.
-2. **Síntomas** — el paciente agrega los síntomas que presenta.
-3. **Resultados e imágenes** — el médico agrega resultados de exámenes e imágenes
-   diagnósticas. El sistema genera además resultados sintéticos a partir de los
-   exámenes/hitos ya realizados.
-4. **Citas** — el call center asigna, reprograma y cancela citas (simulador de
-   agenda).
+La capa de datos del backend depende solo de la interfaz `FuenteDatos`, de modo que
+SQLite se puede reemplazar por los sistemas de la EPS sin tocar los endpoints ni los
+frontends (ver `backend/app/datos/fuente_keralty.py`).
 
-### Roles y permisos (header `X-Rol`)
+```
+App móvil (Figma, paciente)  ─┐
+                              ├─►  Backend FastAPI  ─►  SQLite (datos sintéticos)
+Panel web (frontend, médico/ ─┘
+           call center)
+```
 
-El acceso se controla por el header `X-Rol`. Las operaciones de escritura exigen el
-rol correspondiente; si falta o no corresponde, la API responde **403**. La lectura
-de la historia clínica está disponible para cualquier rol.
+## Roles y permisos (header `X-Rol`)
 
-| Rol           | `X-Rol`       | Puede escribir                         |
-| ------------- | ------------- | -------------------------------------- |
-| Paciente      | `paciente`    | Síntomas y reportes                    |
-| Médico        | `medico`      | Resultados de exámenes e imágenes      |
-| Call center   | `call_center` | Asignar, reprogramar y cancelar citas  |
+El acceso se controla con el header `X-Rol`. Las escrituras exigen el rol
+correspondiente; si falta o no corresponde, la API responde **403**. La lectura de
+la historia clínica está disponible para cualquier rol.
 
-En el frontend el rol se elige en el **menú arriba a la izquierda**; el valor se
-guarda y se envía en cada petición.
+| Rol         | `X-Rol`       | Puede escribir                              | Dónde vive        |
+| ----------- | ------------- | ------------------------------------------- | ----------------- |
+| Paciente    | `paciente`    | Autorreporte de síntomas                    | App móvil         |
+| Médico      | `medico`      | Resultados de exámenes, imágenes, reportes  | Panel de escritorio |
+| Call center | `call_center` | Asignar, reprogramar y cancelar citas       | Panel de escritorio |
+
+## Funcionalidades
+
+### App móvil del paciente (`Figma/`)
+
+- **Onboarding / autorización**: bienvenida, consentimientos (información de salud,
+  personalización, notificaciones) y aceptación de términos.
+- **Recorrido guiado** del hub de herramientas.
+- **Mi proceso**: ruta de atención (vía clínica Colombia), gráficas de evolución
+  (tumoral, marcador CEA, nutricional, hemoglobina) en vista mensual/semestral,
+  línea de tiempo e historia clínica.
+- **¿Cómó te sientes?**: autorreporte de síntomas con lista cerrada; al registrar,
+  devuelve un semáforo de gestión (verde/ámbar/rojo) con mensaje de autocuidado.
+- **Preguntas**: chatbot **simulado** (guion por palabras clave; la mascota cambia
+  de expresión según la respuesta; deriva a "Solicitar cita" o "Llama 123").
+- **Conecta**: grupos de apoyo y fundaciones de cáncer en Colombia (enlaces a sitios
+  oficiales).
+- El isotipo central de la barra inferior cambia según la sección abierta.
+
+### Panel de escritorio (`frontend/`, médico / call center)
+
+- **Historia clínica**: datos del paciente, contexto, ruta de atención (stepper),
+  síntomas y línea de tiempo.
+- **Evolución clínica**: gráfico de líneas + tabla de promedios mensuales de las 4
+  series sintéticas.
+- **Síntomas** (lectura), **Reportes médicos**, **Resultados e imágenes** (alta del
+  médico).
+- **Citas**: gestión del call center (asignar / reprogramar / cancelar).
+- **Reportes de pacientes**: tablero de triaje del call center con **semáforo**
+  (verde: autocuidado · ámbar: reevaluar 24 h · rojo: valoración presencial) y acción
+  recomendada, ordenado por prioridad.
+- Menú de rol arriba a la izquierda (solo médico y call center).
+
+## Datos sintéticos
+
+Todo proviene del libro Excel sintético y de generadores del backend (idempotentes):
+
+- **Pacientes, contexto, reportes, síntomas, alertas, hitos** (del Excel).
+- **Resultados de exámenes** generados a partir de los hitos ya realizados.
+- **Mediciones de evolución** (serie diaria ene–jun por paciente: tumoral, CEA,
+  nutricional, hemoglobina).
+- **Citas** (se crean desde el panel del call center).
+
+El triaje y la ruta de atención son **orden de gestión / contexto**, no una
+valoración médica: Krebs no diagnostica.
 
 ## Requisitos
 
-- Python 3.10 o superior (para el backend).
-- Node.js 18 o superior y `pnpm` (para el frontend).
+- Python 3.10+ (backend).
+- Node.js 18+ y `pnpm` (ambos frontends).
 
-## Backend
+## Puesta en marcha
+
+### 1. Backend (siempre primero)
 
 ```bash
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
+source .venv/bin/activate              # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Importar el libro Excel a SQLite y generar resultados sintéticos.
-# Recrea datos/krebs.db desde cero (idempotente).
+# Importar el Excel y generar los datos sintéticos (recrea datos/krebs.db).
 python -m scripts.importar_excel
 
-# Levantar la API (http://localhost:8000, docs en /docs).
-uvicorn app.main:app --reload
+# Escuchar en toda la red (para que el celular alcance la API).
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### Datos
+API en `http://localhost:8000` · documentación en `/docs`.
 
-- **Libro Excel** sintético en
-  `datos/Base sintetica - TPI Proyecto Krebs Cancer Gastrico.xlsx`.
-- **Base SQLite** generada en `datos/krebs.db`.
-- **Imágenes** (opcional): archivos JPG/PNG en `datos/imagenes/`. El médico puede
-  registrar la referencia a una imagen desde el frontend; el archivo debe existir en
-  esa carpeta para que se muestre.
+### 2. App móvil del paciente
 
-La carpeta `datos/` no se versiona.
+```bash
+cd Figma
+pnpm install
+PORT=8443 pnpm dev
+```
 
-## Frontend
+- En la PC: `http://localhost:8443`
+- En el celular (misma Wi-Fi): `http://<IP-de-tu-PC>:8443` (Vite imprime la IP como
+  "Network").
+
+La app detecta sola la URL del backend: usa el mismo host desde el que se abre,
+puerto 8000. No hace falta reconfigurar al cambiar de red; solo que el backend corra
+en la misma PC. Para forzar otra URL: variable `VITE_API_URL`. Ver `Figma/DEMO.md`.
+
+### 3. Panel de escritorio (médico / call center)
 
 ```bash
 cd frontend
 pnpm install
-pnpm dev          # http://localhost:3000
+pnpm dev                                # http://localhost:3000
 ```
 
 La URL de la API se configura con `NEXT_PUBLIC_API_URL` (por defecto
-`http://localhost:8000/api`, ya definido en `frontend/.env.local`). El backend
-permite CORS desde `http://localhost:3000`.
+`http://localhost:8000/api`, en `frontend/.env.local`).
+
+### Red local y firewall
+
+Para abrir la app desde el celular en la misma Wi-Fi, el backend debe escuchar en
+`0.0.0.0` y el firewall de la PC permitir los puertos 8000 y 8443. El CORS del
+backend ya acepta orígenes de red local (localhost, `192.168.x.x`, `10.x.x.x`,
+`172.16–31.x.x`).
 
 ## Estructura del proyecto
 
 ```
 backend/
   app/
-    main.py            Aplicación FastAPI
+    main.py            Aplicación FastAPI (CORS de red local)
     rutas.py           Endpoints (lectura y escritura con control de rol)
     roles.py           Control de acceso por header X-Rol (403)
+    triaje.py          Prioridad y semáforo de gestión de síntomas
+    ruta.py            Ubicación del paciente en la vía clínica (Colombia)
     esquemas.py        Esquemas Pydantic de entrada/salida
-    db.py              Esquema SQLite (pacientes, citas, resultados, …)
+    db.py              Esquema SQLite (pacientes, citas, resultados, mediciones, …)
     datos/
       modelos.py       Dataclasses de dominio
       fuente.py        Interfaz abstracta FuenteDatos
       fuente_sqlite.py Implementación sobre SQLite
-      fuente_keralty.py Stub de la integración con Keralty
+      fuente_keralty.py Stub de la integración futura
   scripts/
-    importar_excel.py  Importa el Excel y genera resultados sintéticos
-frontend/
+    importar_excel.py  Importa el Excel y genera datos sintéticos
+Figma/                 App móvil del paciente (React + Vite + Tailwind)
+  src/
+    App.tsx            Onboarding, recorrido y hub
+    vistas/            MiProceso, Evolucion, ComoTeSientes, Chatbot, Conecta, Citas
+    lib/               api.ts, types.ts
+  public/krebs/        Logos, animación de carga y PDF de términos
+  DEMO.md              Instrucciones del demo móvil
+frontend/              Panel de escritorio (Next.js)
   app/
-    layout.tsx         Layout con la barra y el menú de rol (arriba a la izq.)
+    layout.tsx         Barra superior y menú de rol
     page.tsx           Selector de paciente y navegación de secciones
-    vistas/            Historia, Síntomas, Resultados, Citas
-  lib/
-    api.ts             Cliente HTTP (envía X-Rol)
-    roles.ts           Catálogo de roles y permisos
-    RolContexto.tsx    Estado global del rol activo
-    tipos.ts           Tipos compartidos con la API
+    vistas/            Historia, Evolucion, Sintomas, ReportesMedicos,
+                       Resultados, Citas, Triaje
+  lib/                 api.ts, roles.ts, RolContexto.tsx, tipos.ts
 datos/                 Datos de entrada y base SQLite (NO versionados)
+Documentacion/         Papers de referencia (ePRO, vía clínica Colombia)
+Mockups/ Logos/        Material de diseño
 ```
 
-## Integración futura con Keralty
+## Fundamento
 
-Las rutas y el frontend dependen solo de la interfaz `FuenteDatos`. Para conectar los
-sistemas de Keralty se completa `FuenteKeralty(FuenteDatos)` y se cambia la fuente
+El modelo se apoya en literatura de **ePRO** (electronic patient-reported outcomes)
+para monitoreo remoto de síntomas con triaje, y en la **vía clínico-administrativa de
+cáncer gástrico en Colombia** (ProPacífico) para la ruta de atención. Ver
+`Documentacion/`.
+
+## Integración futura con la EPS
+
+Las rutas y los frontends dependen solo de la interfaz `FuenteDatos`. Para conectar
+los sistemas reales se completa `FuenteKeralty(FuenteDatos)` y se cambia la fuente
 activa en `backend/app/rutas.py` (`obtener_fuente`). El resto no cambia.
 
 ## Privacidad
